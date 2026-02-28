@@ -6,6 +6,8 @@ Peer-to-Peer Skill Exchange Platform
 SkillFlux is a peer-to-peer skill exchange platform that enables users to teach and learn skills using a credit-based system.
 Instead of paying money, users earn credits by teaching and spend credits to learn. The platform supports multi-session learning, credit transfers, and both online and offline skill exchanges.
 SkillFlux is designed especially to empower local and rural communities where access to structured learning platforms is limited.
+
+
 🚀 Problem Statement
 Many people have valuable skills but lack visibility or opportunities to share them.
 At the same time:
@@ -14,6 +16,8 @@ Existing platforms focus mostly on urban users.
 Most systems support only one-time exchanges.
 There is no proper incentive or structured tracking system.
 💡 Solution
+
+
 SkillFlux solves this by providing:
 ✅ Peer-to-peer skill exchange
 ✅ Credit-based earning & spending model
@@ -22,7 +26,9 @@ SkillFlux solves this by providing:
 ✅ Session tracking system
 ✅ Credit transfer between users
 ✅ Transparent and scalable structure
+
 🎯 Key Features
+
 1️⃣ User Authentication
 Email & Password registration
 Secure login using Firebase Authentication
