@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>SkillFlux | Member Vault</title>
+    <style>
+        :root { --bg: #000; --blue: #3b82f6; --border: #1e293b; --card: #0a0a0a; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: white; padding: 120px 6% 40px; margin: 0; }
+        nav { position: fixed; top: 0; left: 0; width: 100%; height: 80px; display: flex; justify-content: space-between; align-items: center; padding: 0 6%; background: rgba(0,0,0,0.9); border-bottom: 1px solid var(--border); z-index: 1000; box-sizing: border-box; }
+        .vault-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 40px; }
+        .credit-display { background: var(--card); border: 1px solid var(--blue); padding: 30px; border-radius: 20px; text-align: center; min-width: 200px; }
+        .credit-display h1 { font-size: 3.5rem; color: var(--blue); margin: 0; }
+        .btn-out { background: #ef4444; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+        .post-box { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 20px; margin-bottom: 40px; }
+        .marketplace { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+        .skill-card { background: var(--card); border: 1px solid var(--border); padding: 25px; border-radius: 20px; display: flex; flex-direction: column; justify-content: space-between; }
+        input { background: #000; border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: white; margin-right: 10px; width: 250px; }
+        button { background: var(--blue); color: white; border: none; padding: 12px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <nav>
+        <div style="font-size: 1.5rem; font-weight: 900;">Skill<span style="color:var(--blue)">Flux</span></div>
+        <button onclick="logOut()" class="btn-out">Disconnect</button>
+    </nav>
+
+    <div class="vault-header">
+        <div>
+            <p style="color:#666; letter-spacing: 2px; margin-bottom: 5px;">VAULT IDENTITY</p>
+            <h2 id="user-email" style="font-size: 2rem; margin: 0;">Loading...</h2>
+        </div>
+        <div class="credit-display">
+            <small style="font-weight: 800;">FLUX CREDITS</small>
+            <h1 id="user-credits">0</h1>
+        </div>
+    </div>
+
+    <div class="post-box">
+        <h3 style="margin-top:0">List Expertise</h3>
+        <input type="text" id="s-title" placeholder="Skill Title">
+        <input type="text" id="s-desc" placeholder="Brief description">
+        <button onclick="postSkill()">Broadcast</button>
+    </div>
+
+    <h2>Global Marketplace</h2>
+    <div id="market-feed" class="marketplace"></div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, doc, onSnapshot, collection, addDoc, query, orderBy, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAE5zrGWCWE_p91wUj2qdJTfx0J1J5PlXU",
+            authDomain: "skillflux-cca7b.firebaseapp.com",
+            projectId: "skillflux-cca7b",
+            storageBucket: "skillflux-cca7b.firebasestorage.app",
+            messagingSenderId: "53465869448",
+            appId: "1:53465869448:web:26802857ee13d96dcb833d",
+            measurementId: "G-J1VXRH8MM3"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        let uData = null;
+
+        onAuthStateChanged(auth, (user) => {
+            if (!user) {
+                window.location.href = "index.html";
+            } else {
+                document.getElementById('user-email').innerText = user.email;
+                onSnapshot(doc(db, "users", user.uid), (snap) => {
+                    if (snap.exists()) {
+                        uData = snap.data();
+                        document.getElementById('user-credits').innerText = uData.credits;
+                    }
+                });
+                loadMarketplace();
+            }
+        });
+
+        window.postSkill = async () => {
+            const title = document.getElementById('s-title').value;
+            const desc = document.getElementById('s-desc').value;
+            if(!title || !desc) return;
+            await addDoc(collection(db, "skills"), {
+                title, desc, owner: auth.currentUser.uid, ownerEmail: auth.currentUser.email, createdAt: new Date()
+            });
+            document.getElementById('s-title').value = ''; document.getElementById('s-desc').value = '';
+        };
+
+        function loadMarketplace() {
+            onSnapshot(query(collection(db, "skills"), orderBy("createdAt", "desc")), (snap) => {
+                const feed = document.getElementById('market-feed');
+                feed.innerHTML = '';
+                snap.forEach(d => {
+                    const s = d.data();
+                    const isOwn = s.owner === auth.currentUser.uid;
+                    feed.innerHTML += `
+                        <div class="skill-card">
+                            <div><h3>${s.title}</h3><p style="color:#94a3b8">${s.desc}</p></div>
+                            ${!isOwn ? `<button onclick="buySkill('${d.id}', '${s.owner}', '${s.ownerEmail}', '${s.title}')">Acquire (1 Flux)</button>` : '<i>Your Listing</i>'}
+                        </div>`;
+                });
+            });
+        }
+
+        window.buySkill = async (skillId, sellerId, sellerEmail, title) => {
+            if (uData.credits < 1) return alert("Insufficient Liquidity.");
+            try {
+                await updateDoc(doc(db, "users", auth.currentUser.uid), { credits: uData.credits - 1 });
+                const sellerDoc = await getDoc(doc(db, "users", sellerId));
+                await updateDoc(doc(db, "users", sellerId), { credits: sellerDoc.data().credits + 1 });
+                window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=SkillFlux:${title}&add=${sellerEmail}`, '_blank');
+            } catch (e) { alert("Transaction Failed."); }
+        };
+
+        window.logOut = () => signOut(auth);
+    </script>
+</body>
+</html>
